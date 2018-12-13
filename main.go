@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,9 +39,9 @@ func main() {
 	fmt.Println("Listening port on :3000")
 
 	handler := http.NewServeMux()
-	handler.HandleFunc("/hello/", Logger(handlerHello))
-	handler.HandleFunc("/book/", Logger(handlerBook))
-	handler.HandleFunc("/books/", Logger(handlerBooks))
+	handler.HandleFunc("/hello/", Logger(BasicAuth(handlerHello)))
+	handler.HandleFunc("/book/", Logger(BasicAuth(handlerBook)))
+	handler.HandleFunc("/books/", Logger(BasicAuth(handlerBooks)))
 
 	s := http.Server{
 		Addr:           ":3000",          // Адресс сервера
@@ -73,6 +74,33 @@ func Logger(next http.HandlerFunc) http.HandlerFunc {
 
 		next.ServeHTTP(w, r)
 	}
+}
+
+func BasicAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		if len(auth) != 2 || auth[0] != "Basic" {
+			http.Error(w, "Authorization failed!", http.StatusUnauthorized)
+			return
+		}
+
+		hashed, _ := base64.StdEncoding.DecodeString(auth[1])
+		pair := strings.SplitN(string(hashed), ":", 2)
+		if len(pair) != 2 || myAuth(pair[0], pair[1]) {
+			http.Error(w, "Authorization failed!", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+func myAuth(login, pass string) bool {
+	if strings.TrimSpace(login) == "lancer" && strings.TrimSpace(pass) == "52662699" {
+		return true
+	}
+
+	return false
 }
 
 ///////////////////////////////////////////////////////////////////
