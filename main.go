@@ -80,17 +80,17 @@ func Logger(next http.HandlerFunc) http.HandlerFunc {
 func handlerBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	switch {
-	case r.Method == http.MethodGet:
+	switch r.Method {
+	case http.MethodGet:
 		handleGetBook(w, r)
 
-	case r.Method == http.MethodPost:
+	case http.MethodPost:
 		handleAddBook(w, r)
 
-	case r.Method == http.MethodPut:
+	case http.MethodPut:
 		handleUpdateBook(w, r)
 
-	case r.Method == http.MethodDelete:
+	case http.MethodDelete:
 		handleDeleteBook(w, r)
 	}
 }
@@ -178,8 +178,8 @@ func handleUpdateBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 	var response Response
 
-	// Считываем книгу
 	decoder := json.NewDecoder(r.Body) // Декодируем тело запроса
+	id := strings.Replace(r.URL.Path, "/book/", "", 1)
 
 	// Ошибка в декодере
 	err := decoder.Decode(&book) // Передаем адресс на книгу
@@ -192,6 +192,8 @@ func handleUpdateBook(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	book.Id = id
 
 	// Ошибка при обновлении книги
 	err = bookStore.UpdateBook(book)
@@ -219,23 +221,11 @@ func handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 	var response Response
 
-	// Считываем книгу
-	decoder := json.NewDecoder(r.Body) // Декодируем тело запроса
-
-	// Ошибка в декодере
-	err := decoder.Decode(&book) // Передаем адресс на книгу
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		response.Error = err.Error()
-
-		respJson, _ := json.Marshal(response)
-		_, _ = w.Write(respJson)
-
-		return
-	}
+	id := strings.Replace(r.URL.Path, "/book/", "", 1)
+	book.Id = id
 
 	// Ошибка при удалении книги
-	err = bookStore.DeleteBook(book.Id)
+	err := bookStore.DeleteBook(book.Id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		response.Error = err.Error()
